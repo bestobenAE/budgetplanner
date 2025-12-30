@@ -2,39 +2,40 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# Function to load the data
+# Function to load the data (initializes an empty dataframe)
 def load_data():
     return pd.DataFrame(columns=["Category", "Budgeted", "Spent"])
 
-# Function to add expense to the dataframe
+# Function to add an expense to the dataframe
 def add_expense(data, category, budgeted, spent):
     new_row = pd.DataFrame({"Category": [category], "Budgeted": [budgeted], "Spent": [spent]})
     data = pd.concat([data, new_row], ignore_index=True)
     return data
 
-# Function to display total budget overview
+# Function to display the total budget overview
 def display_total(data):
     data["Remaining"] = data["Budgeted"] - data["Spent"]
     total_budget = data["Budgeted"].sum()
     total_spent = data["Spent"].sum()
     total_remaining = data["Remaining"].sum()
 
+    # Display total budget, spent, and remaining balance
     st.write(f"### Total Budget: ${total_budget:.2f}")
     st.write(f"### Total Spent: ${total_spent:.2f}")
     st.write(f"### Remaining Balance: ${total_remaining:.2f}")
 
-# Function to create and display pie chart
+# Function to create and display a pie chart
 def display_pie_chart(data):
     fig = px.pie(data, names="Category", values="Remaining", title="Remaining Budget by Category")
     st.plotly_chart(fig)
 
-# Main function to run the app
+# Main function to run the Streamlit app
 def main():
     # Streamlit page configuration
-    st.set_page_config(page_title="Budget Planner", page_icon="💰", layout="wide")
+    st.set_page_config(page_title="Budget Planner", page_icon="💸", layout="wide")
 
     # App Title
-    st.title("💰 Personal Budget Planner")
+    st.title("💸 Personal Budget Planner")
 
     # Sidebar Inputs
     st.sidebar.header("Add New Expense")
@@ -48,7 +49,7 @@ def main():
     if budgeted < spent:
         st.sidebar.warning("Warning: Spent amount can't exceed budgeted amount!")
 
-    # Load or initialize data
+    # Load or initialize data in session state
     if 'data' not in st.session_state:
         st.session_state['data'] = load_data()
     
