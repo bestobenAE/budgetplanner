@@ -2,45 +2,88 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# Set title
-st.title("Personal Budget Planner")
+# Function to load the data (initializes an empty dataframe)
+def load_data():
+    return pd.DataFrame(columns=["Category", "Budgeted", "Spent"])
 
-# Create a dataframe to store the user's budget info
-data = pd.DataFrame(columns=["Category", "Budgeted", "Spent"])
+# Function to add an expense to the dataframe
+def add_expense(data, category, budgeted, spent):
+    new_row = pd.DataFrame({"Category": [category], "Budgeted": [budgeted], "Spent": [spent]})
+    data = pd.concat([data, new_row], ignore_index=True)
+    return data
 
-# Sidebar Inputs
-st.sidebar.header("Add New Expense")
+# Function to display the total budget overview
+def display_total(data):
+    data["Remaining"] = data["Budgeted"] - data["Spent"]
+    total_budget = data["Budgeted"].sum()
+    total_spent = data["Spent"].sum()
+    total_remaining = data["Remaining"].sum()
 
-category = st.sidebar.text_input("Category (e.g., Food, Rent, Entertainment)")
-budgeted = st.sidebar.number_input("Budgeted Amount", min_value=0.0, step=0.1)
-spent = st.sidebar.number_input("Spent Amount", min_value=0.0, step=0.1)
+    # Display total budget, spent, and remaining balance
+    st.write(f"### Total Budget: ${total_budget:.2f}")
+    st.write(f"### Total Spent: ${total_spent:.2f}")
+    st.write(f"### Remaining Balance: ${total_remaining:.2f}")
 
-# Add button to save data
-if st.sidebar.button("Add Expense"):
-    if category and budgeted > 0 and spent >= 0:
-        new_row = pd.DataFrame({"Category": [category], "Budgeted": [budgeted], "Spent": [spent]})
-        data = pd.concat([data, new_row], ignore_index=True)
-        st.success(f"Added {category} with Budgeted: ${budgeted} and Spent: ${spent}")
-    else:
-        st.warning("Please fill all fields with valid data.")
+# Function to create and display a pie chart
+def display_pie_chart(data):
+    fig = px.pie(data, names="Category", values="Remaining", title="Remaining Budget by Category")
+    st.plotly_chart(fig)
 
-# Display the data
-st.write("### Budget Overview")
-st.dataframe(data)
+# Main function to run the Streamlit app
+def main():
+    # Streamlit page configuration
+    st.set_page_config(page_title="Budget Planner", page_icon="💸", layout="wide")
 
-# Calculate the remaining balance
-data["Remaining"] = data["Budgeted"] - data["Spent"]
-total_budget = data["Budgeted"].sum()
-total_spent = data["Spent"].sum()
-total_remaining = data["Remaining"].sum()
+    # App Title
+    st.title("💸 Personal Budget Planner")
+    st.markdown(
+        """
+        Welcome to the **Budget Planner**! This app helps you track your budget and expenses, visualize 
+        your spending, and ensure you're staying on track financially.
+        """
+    )
 
-st.write(f"### Total Budget: ${total_budget}")
-st.write(f"### Total Spent: ${total_spent}")
-st.write(f"### Remaining Balance: ${total_remaining}")
+    # Sidebar Inputs
+    st.sidebar.header("Add New Expense")
+    
+    # Input fields
+    category = st.sidebar.text_input("Category (e.g., Food, Rent, Entertainment)", "")
+    budgeted = st.sidebar.number_input("Budgeted Amount", min_value=0.0, step=0.1, format="%.2f")
+    spent = st.sidebar.number_input("Spent Amount", min_value=0.0, step=0.1, format="%.2f")
 
-# Plot a pie chart of expenses vs. remaining budget
-fig = px.pie(data, names="Category", values="Remaining", title="Remaining Budget by Category")
-st.plotly_chart(fig)
+    # Feedback on invalid data (if spent exceeds budgeted)
+    if budgeted < spent:
+        st.sidebar.warning("⚠️ Spent amount can't exceed budgeted amount!")
 
-# Deploy to Streamlit
-# You can run this using: streamlit run <script_name.py>
+    # Load or initialize data in session state (so data persists across reruns)
+    if 'data' not in st.session_state:
+        st.session_state['data'] = load_data()
+    
+    data = st.session_state['data']
+
+    # Add Expense Button
+    if st.sidebar.button("Add Expense"):
+        # Check if inputs are valid before adding
+        if category and budgeted > 0 and spent >= 0:
+            data = add_expense(data, category, budgeted, spent)
+            st.session_state['data'] = data
+            st.success(f"✅ Added {category} with Budgeted: ${budgeted:.2f} and Spent: ${spent:.2f}")
+        else:
+            st.sidebar.warning("⚠️ Please fill all fields with valid data.")
+    
+    # Layout for the main content using columns
+    col1, col2 = st.columns([3, 1])
+
+    with col1:
+        # Display data table with a neat style
+        st.write("### Budget Overview")
+        st.dataframe(data, use_container_width=True)
+
+    with col2:
+        # Display total budget, pie chart, and any other useful info
+        display_total(data)
+        display_pie_chart(data)
+
+# Run the app
+if __name__ == "__main__":
+    main()
